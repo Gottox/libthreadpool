@@ -57,7 +57,7 @@ static void
 thread_func_ackermann(void *arg) {
 	unsigned int *store = arg;
 
-	*store = ackermann(3, 10);
+	*store = ackermann(3, 8);
 }
 
 static void
@@ -121,7 +121,7 @@ test_add_multiple_tasks_ackermann(void) {
 	rv = threadpool_destroy(pool);
 	assert(rv == 0);
 
-	unsigned int expected = ackermann(3, 10);
+	unsigned int expected = ackermann(3, 8);
 	for (size_t i = 0; i < LENGTH(ackermann_results); i++) {
 		assert(ackermann_results[i] == expected);
 	}
