@@ -239,6 +239,7 @@ threadpool_destroy(struct Threadpool *threadpool) {
 	}
 
 	free(threadpool->workers);
+	free(threadpool);
 out:
 	return rv;
 }
