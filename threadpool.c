@@ -1,11 +1,46 @@
+/******************************************************************************
+ *                                                                            *
+ * Copyright (c) 2023, Enno Boland <g@s01.de>                                 *
+ *                                                                            *
+ * Redistribution and use in source and binary forms, with or without         *
+ * modification, are permitted provided that the following conditions are     *
+ * met:                                                                       *
+ *                                                                            *
+ * * Redistributions of source code must retain the above copyright notice,   *
+ *   this list of conditions and the following disclaimer.                    *
+ * * Redistributions in binary form must reproduce the above copyright        *
+ *   notice, this list of conditions and the following disclaimer in the      *
+ *   documentation and/or other materials provided with the distribution.     *
+ *                                                                            *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS    *
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,  *
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR     *
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR          *
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,      *
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,        *
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR         *
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF     *
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING       *
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS         *
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.               *
+ *                                                                            *
+ ******************************************************************************/
+
 #include "include/threadpool.h"
-#include <errno.h>
 #include <pthread.h>
 #include <stdbool.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
+
+struct Threadpool {
+	int idle;
+	pthread_mutex_t mutex;
+	pthread_cond_t cond;
+	size_t nthreads;
+	struct ThreadpoolWorker *workers;
+	struct ThreadpoolTask *task_queue;
+	bool run;
+};
 
 struct ThreadpoolWorker {
 	pthread_t tid;
@@ -20,7 +55,7 @@ struct ThreadpoolTask {
 };
 
 static int
-threadpool_get_cpu_count(void) {
+cpu_count(void) {
 	long numCPUs = sysconf(_SC_NPROCESSORS_ONLN);
 	return (int)numCPUs;
 }
@@ -91,16 +126,22 @@ out:
 	return NULL;
 }
 
-int
-threadpool_init(struct Threadpool *threadpool, size_t nthreads) {
+struct Threadpool *
+threadpool_init(size_t nthreads) {
+	struct Threadpool *threadpool;
 	int rv = 0;
 	if (nthreads == 0) {
-		nthreads = threadpool_get_cpu_count();
+		nthreads = cpu_count();
 	}
 
-	memset(threadpool, 0, sizeof(*threadpool));
+	threadpool = calloc(1, sizeof(*threadpool));
+	if (threadpool == NULL) {
+		goto out;
+	}
+
 	rv = pthread_cond_init(&threadpool->cond, NULL);
 	if (rv < 0) {
+		threadpool = NULL;
 		goto out;
 	}
 
@@ -108,7 +149,7 @@ threadpool_init(struct Threadpool *threadpool, size_t nthreads) {
 	threadpool->run = true;
 	threadpool->workers = calloc(nthreads, sizeof(*threadpool->workers));
 	if (threadpool->workers == NULL) {
-		rv = -1;
+		threadpool = NULL;
 		goto out;
 	}
 
@@ -117,12 +158,13 @@ threadpool_init(struct Threadpool *threadpool, size_t nthreads) {
 		worker->threadpool = threadpool;
 		rv = pthread_create(&worker->tid, NULL, worker_run, worker);
 		if (rv < 0) {
+			threadpool = NULL;
 			goto out;
 		}
 	}
 
 out:
-	return rv;
+	return threadpool;
 }
 
 int
@@ -167,7 +209,7 @@ out:
 }
 
 int
-threadpool_cleanup(struct Threadpool *threadpool) {
+threadpool_destroy(struct Threadpool *threadpool) {
 	int rv = 0;
 	rv = pthread_mutex_lock(&threadpool->mutex);
 	if (rv < 0) {

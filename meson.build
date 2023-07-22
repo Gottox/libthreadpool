@@ -10,6 +10,7 @@ libthreadpool_dep = declare_dependency(
     link_with: [libthreadpool],
 )
 
+executable('example', 'example.c', dependencies: [libthreadpool_dep])
 threadpool_test = executable('threadpool_test', 'threadpool_test.c', dependencies: [libthreadpool_dep])
 
 test('test', threadpool_test)
