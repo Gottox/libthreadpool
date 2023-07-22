@@ -10,9 +10,17 @@ project(
 )
 
 threads_dep = dependency('threads')
-libthreadpool = library('libthreadpool', 'threadpool.c', install: true)
+libthreadpool = library(
+    'threadpool',
+    'threadpool.c',
+    install: not meson.is_subproject(),
+)
+include_dir = include_directories('include')
+if not meson.is_subproject()
+    install_headers('include/threadpool.h')
+endif
 libthreadpool_dep = declare_dependency(
-    include_directories: ['include'],
+    include_directories: include_dir,
     dependencies: [threads_dep],
     link_with: [libthreadpool],
 )
@@ -31,4 +39,11 @@ threadpool_test = executable(
 )
 test('test', threadpool_test)
 
-
+pkg_mod = import('pkgconfig')
+pkg_mod.generate(
+    libthreadpool,
+    name: 'libthreadpool',
+    description: 'A simple thread pool library',
+    libraries: libthreadpool,
+    version: meson.project_version(),
+)
