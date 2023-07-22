@@ -2,7 +2,11 @@ project(
     'libthreadpool',
     'c',
     version: '0.1.1',
-    default_options: ['warning_level=3'],
+    default_options: [
+        'c_std=c99',
+        'optimization=0',
+        'warning_level=3',
+    ],
 )
 
 threads_dep = dependency('threads')
