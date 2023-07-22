@@ -40,16 +40,24 @@
 #include <threadpool.h>
 #include <unistd.h>
 
-static atomic_int counter = 0;
+#define LENGTH(x) (sizeof(x) / sizeof(x[0]))
+
+unsigned int
+ackermann(unsigned int m, unsigned int n) {
+	if (m == 0) {
+		return n + 1;
+	} else if (m > 0 && n == 0) {
+		return ackermann(m - 1, 1);
+	} else {
+		return ackermann(m - 1, ackermann(m, n - 1));
+	}
+}
 
 static void
-thread_func_inc(void *arg) {
-	(void)arg;
-	int rv = 0;
+thread_func_ackermann(void *arg) {
+	unsigned int *store = arg;
 
-	usleep(1000);
-	atomic_fetch_add(&counter, 1);
-	assert(rv == PTHREAD_BARRIER_SERIAL_THREAD || rv == 0);
+	*store = ackermann(3, 10);
 }
 
 static void
@@ -65,15 +73,25 @@ test_init_cleanup(void) {
 }
 
 static void
+thread_func_inc(void *arg) {
+	atomic_uint *counter = arg;
+	int rv = 0;
+
+	usleep(1000);
+	atomic_fetch_add(counter, 1);
+	assert(rv == PTHREAD_BARRIER_SERIAL_THREAD || rv == 0);
+}
+
+static void
 test_add_task(void) {
 	threadpool_t pool;
 	int rv = 0;
-	counter = 0;
+	atomic_uint counter = 0;
 
 	pool = threadpool_init(1);
 	assert(pool != NULL);
 
-	rv = threadpool_schedule(pool, thread_func_inc, NULL);
+	rv = threadpool_schedule(pool, thread_func_inc, &counter);
 	assert(rv == 0);
 
 	while (atomic_load(&counter) != 1) {
@@ -85,28 +103,50 @@ test_add_task(void) {
 }
 
 static void
-test_add_multiple_tasks(void) {
+test_add_multiple_tasks_ackermann(void) {
 	struct Threadpool *pool;
 	int rv = 0;
-	int tasks = 10;
+	unsigned int ackermann_results[100] = {0};
 
-	counter = 0;
-
-	pool = threadpool_init(2);
+	pool = threadpool_init(0);
 	assert(pool != NULL);
 
-	for (int i = 0; i < tasks; i++) {
-		rv = threadpool_schedule(pool, thread_func_inc, NULL);
+	for (size_t i = 0; i < LENGTH(ackermann_results); i++) {
+		ackermann_results[i] = i;
+		rv = threadpool_schedule(
+				pool, thread_func_ackermann, &ackermann_results[i]);
 		assert(rv == 0);
 	}
 
-	while (atomic_load(&counter) != tasks) {
-		usleep(1000);
-	}
-
-	puts("cleanup");
 	rv = threadpool_destroy(pool);
 	assert(rv == 0);
+
+	unsigned int expected = ackermann(3, 10);
+	for (size_t i = 0; i < LENGTH(ackermann_results); i++) {
+		assert(ackermann_results[i] == expected);
+	}
+}
+
+static void
+test_add_multiple_tasks(void) {
+	struct Threadpool *pool;
+	int rv = 0;
+	atomic_int counter[10000] = {0};
+
+	pool = threadpool_init(0);
+	assert(pool != NULL);
+
+	for (size_t i = 0; i < LENGTH(counter); i++) {
+		rv = threadpool_schedule(pool, thread_func_inc, &counter[i]);
+		assert(rv == 0);
+	}
+
+	rv = threadpool_destroy(pool);
+	assert(rv == 0);
+
+	for (size_t i = 0; i < LENGTH(counter); i++) {
+		assert(atomic_load(&counter[i]) == 1);
+	}
 }
 
 int
@@ -122,6 +162,9 @@ main(int argc, char *argv[]) {
 	fputs(" done\n", stdout);
 	fputs("test_add_multiple_tasks", stdout);
 	test_add_multiple_tasks();
+	fputs(" done\n", stdout);
+	fprintf(stdout, "test_add_multiple_tasks_ackermann");
+	test_add_multiple_tasks_ackermann();
 	fputs(" done\n", stdout);
 
 	return 0;
