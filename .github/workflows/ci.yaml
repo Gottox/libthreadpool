@@ -14,4 +14,5 @@ jobs:
         setup-options: >
           -Db_coverage=true
           -Dwerror=true
+          -Db_sanitizeaddress,undefined
 
