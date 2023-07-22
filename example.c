@@ -9,9 +9,11 @@ void task(void *arg) {
 
 int main(void) {
 	threadpool_t pool = threadpool_init(0);
-	for (int i = 0, store[10]; i < 10; i++) {
-		store[i] = i;
-		threadpool_schedule(pool, task, &store[i]);
+	int *args = calloc(10, sizeof(int));
+	for (int i = 0; i < 10; i++) {
+		args[i] = i;
+		threadpool_schedule(pool, task, &args[i]);
 	}
 	threadpool_destroy(pool);
+	free(args);
 }
