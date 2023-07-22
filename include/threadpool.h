@@ -35,6 +35,11 @@
 
 #define THREADPOOL_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #include <stddef.h>
 
 /**
@@ -67,4 +72,8 @@ int threadpool_schedule(
  */
 int threadpool_destroy(threadpool_t threadpool);
 
+
+#ifdef __cplusplus
+}
+#endif
 #endif // THREADPOOL_H
