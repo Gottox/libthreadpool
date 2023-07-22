@@ -46,10 +46,7 @@ static void
 thread_func_inc(void *arg) {
 	(void)arg;
 	int rv = 0;
-	char name[16] = {0};
-	pthread_getname_np(pthread_self(), name, sizeof(name));
 
-	printf("thread_func_inc %s\n", name);
 	usleep(1000);
 	atomic_fetch_add(&counter, 1);
 	assert(rv == PTHREAD_BARRIER_SERIAL_THREAD || rv == 0);
