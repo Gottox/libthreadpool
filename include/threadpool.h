@@ -39,7 +39,6 @@
 extern "C" {
 #endif
 
-
 #include <stddef.h>
 
 /**
@@ -64,14 +63,13 @@ threadpool_t threadpool_init(size_t num_threads);
  * @param task The task function to run the task
  * @param arg The argument to the task function.
  */
-int threadpool_schedule(
-		threadpool_t threadpool, threadpool_task_t task, void *arg);
+int
+threadpool_schedule(threadpool_t threadpool, threadpool_task_t task, void *arg);
 
 /**
  * @brief Cleans up a threadpool.
  */
 int threadpool_destroy(threadpool_t threadpool);
-
 
 #ifdef __cplusplus
 }

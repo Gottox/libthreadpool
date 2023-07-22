@@ -35,10 +35,10 @@
 
 #include <assert.h>
 #include <pthread.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <threadpool.h>
 #include <unistd.h>
-#include <stdatomic.h>
 
 static atomic_int counter = 0;
 
