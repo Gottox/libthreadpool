@@ -33,7 +33,6 @@
 #include <unistd.h>
 
 struct Threadpool {
-	int idle;
 	pthread_mutex_t mutex;
 	pthread_cond_t cond;
 	size_t nthreads;
@@ -117,7 +116,6 @@ worker_run(void *data) {
 		if (threadpool->run == false) {
 			break;
 		}
-		threadpool->idle++;
 		rv = pthread_cond_wait(&threadpool->cond, &threadpool->mutex);
 	}
 out:
