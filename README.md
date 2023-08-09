@@ -1,3 +1,7 @@
+# OBSOLETE
+
+this library has been integrated into [cextras](https://github.com/Gottox/cextras)
+
 # libthreadpool
 
 A simplistic thread pool implementation in C.
